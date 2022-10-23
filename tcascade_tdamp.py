@@ -1,24 +1,43 @@
+# script whose primary purpose is to return cascade time over damping time
+# also stores velocity divergence for a few runs, which were used to get an
+# estimate of the cascade time
+
 import numpy as np
 import matplotlib.pyplot as plt
-# Athena++ history data
+
+# function to get rolling derivative
+def get_deriv(ykey,xkey,smooth = None):
+    """Return derivative of `ykey` wrt to `xkey`
+     while keeping the lenght constant.
+      Keywords:
+     * hst           -- HST numpy array
+       * ykey          -- other y values or key to take the derivate
+       * xkey          -- key
+       * smooth        -- smooth over length in units of `xkey`
+     """
+    y = ykey
+    x = xkey
+    # x = hst[xkey]
+    # if isinstance(ykey, (str, basestring)):
+    #     y = hst[ykey]
+    # else:
+    #     assert len(ykey) == len(x), "`key` has to be string or array of length `x`"
+    #     y = ykey
+    dx = (x[1:] - x[:-1])
+    dydx = (y[1:] - y[:-1]) / dx
+    if smooth is not None:
+        if isinstance(smooth, int):
+            n = smooth
+        else:
+            n = np.round(smooth / np.median(dx))
+        dydx = np.convolve(dydx, np.ones(int(n)) / n, mode='same')
+
+    r = np.interp(x, 0.5 * (x[1:] + x[:-1]), dydx)
+    return r
 
 
-#dir = './crbeta1/diff3e27_higherMach_res256/crbeta10000/'
-#dir = './crbeta1/diff3e27_higherMach_res256/crbeta001/'
-#dir = './diff3e27_streaming_higherMach_true/beta0125/Mach05/res128/crbeta1/lowerBetaAgain/noDiff/vm80/'
-#dir = './diff3e27_streaming_higherMach_true/beta0125/Mach05/res128/crbeta1/lowerBetaAgain/beta1_sanityCheck/'
-#dir = './diff3e27_higherMach_true/vm5_res256/'
-#dir = './crbeta1/diff3e27_higherMach_res256/crbeta1/corrected/res128_beta10/'
-#dir = './crbeta1/diff3e27_higherMach_res256/crbeta1/corrected/'
-#dir = './crbeta001/sweetspot_lowerMach/res256/'
-#dir = './crbeta01/corrected/sweetspot_lowerMach_res256/'
+# directory on local computer holdling the relevant .hst file
 dir = './crbeta1/corrected/streaming/iso_plusDiff/plusDiff/beta1/res512/'
-#dir = './noCRs_epsilonTest/'
-
-#dir = './crbeta1/diff3e27_higherMach_res256/crbeta001/res128_beta10/vm20/'
-#dir = './crbeta1/diff3e27_higherMach_res256/crbeta001/res128_beta10/higherKappa/higherKappaAgain/'
-#dir = './crbeta1/diff3e27_higherMach_res256/crbeta001/res128_beta10/vm20/'
-#dir = './diff3e27_streaming_higherMach_true/beta0125/Mach05/res128/crbeta1/lowerBetaAgain/vm20_hlle/'
 time, mass, ke1, ke2, ke3, me1, me2, me3, ec = np.loadtxt(dir+'cr.hst',skiprows = 2, usecols = (0,2,6,7,8,9,10,11,12),unpack=True)
 
 
@@ -29,7 +48,6 @@ csval = []
 
 
 edenstocgs = 6.54e-11
-#cellVol = (250*3.0856e18)**3.0
 cellVol1 = (2.0)**3.0
 ketot = []
 metot = []
@@ -61,8 +79,10 @@ growthTime_log = (1/(p0[0]*np.log(10)))
 predicted = 300
 
 
+# Pcr/Pg
 CRPresGasPres = np.array(ectot)*0.333/(1.67e-28*1e14)
-#timeeddy = np.array(time)*3.155e13/(3.0856e21/7.e6)
+
+# t_eddy assuming Mach = 0.5
 timeeddy = np.array(time)*3.155e13/(0.667*3.0856e21/5.e6)
 
 
@@ -113,38 +133,6 @@ plt.legend()
 plt.tight_layout()
 plt.savefig(dir+'Magnetic_EnergyDensity_Compare.pdf')
 plt.close()
-
-def get_deriv(ykey,xkey,smooth = None):
-#def get_deriv(hst, ykey, xkey = 'time', smooth = None):
-    """Return derivative of `ykey` wrt to `xkey`
-     while keeping the lenght constant.
-      Keywords:
-     * hst           -- HST numpy array
-       * ykey          -- other y values or key to take the derivate
-       * xkey          -- key
-       * smooth        -- smooth over length in units of `xkey`
-     """
-    y = ykey
-    x = xkey
-    # x = hst[xkey]
-    # if isinstance(ykey, (str, basestring)):
-    #     y = hst[ykey]
-    # else:
-    #     assert len(ykey) == len(x), "`key` has to be string or array of length `x`"
-    #     y = ykey
-    dx = (x[1:] - x[:-1])
-    dydx = (y[1:] - y[:-1]) / dx
-    if smooth is not None:
-        if isinstance(smooth, int):
-            n = smooth
-        else:
-            n = np.round(smooth / np.median(dx))
-        dydx = np.convolve(dydx, np.ones(int(n)) / n, mode='same')
-
-    r = np.interp(x, 0.5 * (x[1:] + x[:-1]), dydx)
-    return r
-
-
 
 
 
